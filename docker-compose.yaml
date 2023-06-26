@@ -39,6 +39,18 @@ services:
         condition: service_completed_successfully
     ports:
       - "8000:8000"
+    volumes:
+      - ./core:/opt/app/core/
+      - ./todolist_diplom:/opt/app/todolist_diplom/
+
+  frontend:
+    image: sermalenk/skypro-front:lesson-34
+    restart: on-failure
+    ports:
+      - "80:80"
+    depends_on:
+      api:
+        condition: service_started
 
 volumes:
   pg_data:
