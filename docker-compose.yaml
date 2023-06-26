@@ -17,7 +17,28 @@ services:
       - "5433:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data/
+  run_migrations:
+    build: .
+    env_file: .env
+    environment:
+      POSTGRES_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    command: python manage.py migrate
 
+  api:
+    build: .
+    env_file: .env
+    environment:
+      POSTGRES_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+      run_migrations:
+        condition: service_completed_successfully
+    ports:
+      - "8000:8000"
 
 volumes:
   pg_data:
