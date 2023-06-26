@@ -3,7 +3,7 @@ version: "3.8"
 services:
 
   db:
-    image: postgres:15.2-alpine
+    image: postgres:15.2
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -13,39 +13,28 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
-    ports:
-      - "5433:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data/
 
   run_migrations:
-    build: .
+    image: ${DOCKERHUB_USER}/diplom:latest
     env_file: .env
-    environment:
-      POSTGRES_HOST: db
     depends_on:
       db:
         condition: service_healthy
     command: python manage.py migrate
 
   api:
-    build: .
+    image: ${DOCKERHUB_USER}/diplom:latest
     env_file: .env
-    environment:
-      POSTGRES_HOST: db
     depends_on:
       db:
         condition: service_healthy
       run_migrations:
         condition: service_completed_successfully
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./core:/opt/app/core/
-      - ./todolist_diplom:/opt/app/todolist_diplom/
 
   collect_static:
-    build: .
+    image: ${DOCKERHUB_USER}/diplom:latest
     env_file: .env
     command: python manage.py collectstatic -c --no-input
     volumes:
@@ -62,7 +51,7 @@ services:
       collect_static:
         condition: service_completed_successfully
     volumes:
-      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
       - django_static:/usr/share/nginx/html/static/
 
 volumes:
