@@ -12,7 +12,6 @@ class User(AbstractUser):
     phone = models.CharField(max_length=12)
     role = models.CharField(max_length=5, choices=UserRole.choices, default=UserRole.USER)
 
-
     def __str__(self):
         return self.username
 
