@@ -2,8 +2,7 @@ from typing import Any
 
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.password_validation import validate_password
-from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
+from rest_framework import exceptions, serializers
 
 from core.models import User
 
@@ -29,7 +28,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
     def validate(self, attrs: dict) -> dict:
         if attrs['password'] == attrs['password_repeat']:
             return attrs
-        raise ValidationError('Пароли не совпадают')
+        raise exceptions.ValidationError('Пароли не совпадают')
 
     def create(self, validated_data: dict) -> User:
         del validated_data['password_repeat']
@@ -49,5 +48,5 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 class ChangingPasswordSerializer(serializers.Serializer):
-    old_password = serializers.CharField(style={'input_type': 'password'}, required=True)
-    new_password = serializers.CharField(style={'input_type': 'password'}, required=True)
+    old_password = PasswordFild(validate=False)
+    new_password = PasswordFild()
