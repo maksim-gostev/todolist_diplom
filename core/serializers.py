@@ -8,17 +8,19 @@ from rest_framework.exceptions import ValidationError
 from core.models import User
 
 
-class PasswordField(serializers.CharField):
-    def __init__(self, **kwargs: Any) -> None:
+class PasswordFild(serializers.CharField):
+    def __init__(self, validate: bool = True, **kwargs: Any) -> None:
         kwargs['style'] = {'input_type': 'password'}
         kwargs.setdefault('write_only', True)
+        kwargs.setdefault('required', True)
         super().__init__(**kwargs)
-        self.validators.append(validate_password)
+        if validate:
+            self.validators.append(validate_password)
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
-    password = PasswordField(min_length=8)
-    password_repeat = PasswordField(min_length=8)
+    password = PasswordFild(write_only=False)
+    password_repeat = PasswordFild(validate=False)
 
     class Meta:
         model = User
@@ -32,9 +34,20 @@ class UserCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data: dict) -> User:
         del validated_data['password_repeat']
         validated_data['password'] = make_password(validated_data['password'])
-        return User.objects.create(**validated_data)
+        return super().create(validated_data)
 
 
 class UserLoginSerializer(serializers.Serializer):
     username = serializers.CharField(required=True)
-    password = PasswordField(required=True)
+    password = PasswordFild(validate=False)
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'first_name', 'last_name', 'email')
+
+
+class ChangingPasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(style={'input_type': 'password'}, required=True)
+    new_password = serializers.CharField(style={'input_type': 'password'}, required=True)
