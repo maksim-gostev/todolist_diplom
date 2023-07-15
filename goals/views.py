@@ -91,7 +91,7 @@ class GoalCategoryView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = GoalCategorySerializer
 
     def get_queryset(self):
-        return GoalCategory.objects.filter(board__participants__user=self.request.user, is_deleted=False)
+        return GoalCategory.objects.filter(is_deleted=False)
 
 
     def perform_destroy(self, instance: GoalCategory) -> None:
@@ -165,9 +165,7 @@ class GoalCommentListView(generics.ListAPIView):
     def get_queryset(self):
 
         return GoalComment.objects.filter(goal__category__board__participants__user_id=self.request.user.id).exclude(
-            goal__status=Goal.Status.archived
-
-        )
+            goal__status=Goal.Status.archived)
 
 
 class GoalCommentView(generics.RetrieveUpdateDestroyAPIView):
@@ -178,5 +176,4 @@ class GoalCommentView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         return GoalComment.objects.filter(goal__category__board__participants__user_id=self.request.user.id).exclude(
             goal__status=Goal.Status.archived
-
         )
