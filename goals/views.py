@@ -42,7 +42,7 @@ class BoardListView(generics.ListAPIView):
     ordering = ['title']
 
     def get_queryset(self) -> QuerySet[Board]:
-        return Board.objects.filter(participants__user_id=self.request.user.id).exclude(is_deleted=True)
+        return Board.objects.filter(participants__user=self.request.user).exclude(is_deleted=True)
 
 
 class BoardView(generics.RetrieveUpdateDestroyAPIView):
@@ -123,7 +123,6 @@ class GoalListView(generics.ListAPIView):
     search_fields = ['title', 'description']
 
     def get_queryset(self):
-
         return Goal.objects.filter(
             category__is_deleted=False, category__board__participants__user_id=self.request.user.id
         ).exclude(status=Goal.Status.archived)
@@ -133,6 +132,10 @@ class GoalView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [GoalPermission]
     serializer_class = GoalSerializer
 
+    # def get_queryset(self):
+    #     return Goal.objects.filter(
+    #         category__is_deleted=False, category__user__participants=self.request.user
+    #     ).exclude(status=Goal.Status.archived)
     def get_queryset(self):
         return Goal.objects.filter(
             category__is_deleted=False, category__board__participants__user_id=self.request.user.id
