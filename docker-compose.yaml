@@ -22,7 +22,7 @@ services:
     build: .
     env_file: .env
     environment:
-      POSTGRES_HOST: db
+      DB_HOST: db
     depends_on:
       db:
         condition: service_healthy
@@ -32,7 +32,7 @@ services:
     build: .
     env_file: .env
     environment:
-      POSTGRES_HOST: db
+      DB_HOST: db
     depends_on:
       db:
         condition: service_healthy
@@ -44,6 +44,7 @@ services:
       - ./core:/opt/app/core/
       - ./todolist_diplom:/opt/app/todolist_diplom/
 
+
   collect_static:
     build: .
     env_file: .env
@@ -52,7 +53,7 @@ services:
       - django_static:/opt/app/static/
 
   frontend:
-    image: sermalenk/skypro-front:lesson-37
+    image: sermalenk/skypro-front:lesson-38
     restart: on-failure
     ports:
       - "80:80"
