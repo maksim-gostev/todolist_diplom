@@ -3,11 +3,9 @@ from pydantic import BaseModel
 
 class Chat(BaseModel):
     id: int
-    username: str | None = None
 
 
 class Message(BaseModel):
-    message_id: int
     chat: Chat
     text: str
 
