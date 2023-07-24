@@ -56,7 +56,7 @@ services:
     image: sermalenk/skypro-front:lesson-38
     restart: on-failure
     ports:
-      - "80:80"
+      - "81:80"
     depends_on:
       api:
         condition: service_started
@@ -74,9 +74,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      run_migrations:
-        condition: service_completed_successfully
-    command: python manage.py migrate
+    command: python manage.py runbot
 
 volumes:
   pg_data:

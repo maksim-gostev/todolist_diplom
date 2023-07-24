@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 class Chat(BaseModel):
     id: int
+    username: str | None = None
 
 
 class Message(BaseModel):
