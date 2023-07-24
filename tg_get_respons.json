@@ -1,0 +1,35 @@
+{
+    "ok": true,
+    "result": [
+        {
+            "update_id": 496540947,
+            "message": {
+                "message_id": 3,
+                "from": {
+                    "id": 5157274025,
+                    "is_bot": false,
+                    "first_name": "Гостев",
+                    "last_name": "Максим",
+                    "username": "Teranys",
+                    "language_code": "ru"
+                },
+                "chat": {
+                    "id": 5157274025,
+                    "first_name": "Гостев",
+                    "last_name": "Максим",
+                    "username": "Teranys",
+                    "type": "private"
+                },
+                "date": 1690113421,
+                "text": "/start",
+                "entities": [
+                    {
+                        "offset": 0,
+                        "length": 6,
+                        "type": "bot_command"
+                    }
+                ]
+            }
+        }
+    ]
+}
