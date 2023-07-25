@@ -1,52 +1,48 @@
-import logging
-from pydantic import ValidationError
+import requests
+from django.conf import settings
+from requests import Response
 
 from bot.tg.schemas import GetUpdatesResponse, SendMessageResponse
-from django.conf import settings
-import requests
-
-logger = logging.getLogger(__name__)
-
-
-class TgClientError(Exception):
-    ...
 
 
 class TgClient:
-    def __init__(self, token: str | None = None):
-        self.__token = token if token else settings.BOT_TOKEN
-        self.__url = f'https://api.telegram.org/bot{self.__token}/'
+    """
+    Класс взаимодействия с telegram-ботом
+    """
 
-    def __get_url(self, method: str) -> str:
-        return f'{self.__url}{method}'
+    def __init__(self, token: str = settings.BOT_TOKEN) -> None:
+        self.token = token
 
-    def get_updates(self, offset: int = 0, timeout: int = 60, **kwargs) -> GetUpdatesResponse:
+    def get_url(self, method: str) -> str:
+        """
+        Получить URL-адрес в зависимости от метода
+        :param method: telegram method
+        :return: url for request
+        """
+        return f'https://api.telegram.org/bot{self.token}/{method}'
+
+    def get_updates(self, offset: int = 0, timeout: int = 60) -> GetUpdatesResponse:
         """
         Получайте обновления от telegram-бота
-        :параметра offset: смещение
-        :параметр timeout: тайм-аут
-        :возврат: return
+        :param offset: offset
+        :param timeout: timeout
+        :return: response
         """
-        data = self._get('getUpdates', offset=offset, timeout=timeout, **kwargs)
-        return self.__serialize_tg_response(GetUpdatesResponse, data)
+        response: Response = requests.get(
+            self.get_url('getUpdates'), params={'offset': offset, 'timeout': timeout}
+        )
+        data = response.json()
+        return GetUpdatesResponse(**data)
 
-    def send_message(self, chat_id: int, text: str, **kwargs) -> SendMessageResponse:
-        data = self._get('sendMessage', chat_id=chat_id, text=text, **kwargs)
-        return self.__serialize_tg_response(SendMessageResponse, data)
-
-    def _get(self, method: str, **params) -> dict:
-        url = self.__get_url(method)
-        params.setdefault('timeout', 60)
-        response = requests.get(url, params=params)
-        if not response.ok:
-            logger.warning('Неверный код состояния %d из команды %s', response.status_code, method)
-            raise TgClientError
-        return response.json()
-
-    @staticmethod
-    def __serialize_tg_response(serializer_clas, data):
-        try:
-            return serializer_clas(**data)
-        except ValidationError:
-            logger.error('Не удалось сериализовать ответ telegram: %s', data)
-            raise TgClientError
+    def send_message(self, chat_id: int, text: str) -> SendMessageResponse:
+        """
+        Отправить сообщение telegram-боту
+        :param chat_id: chat id
+        :param text: text message
+        :return: response
+        """
+        response: Response = requests.get(
+            self.get_url('sendMessage'), params={'chat_id': chat_id, 'text': text}
+        )
+        data = response.json()
+        return SendMessageResponse(**data)

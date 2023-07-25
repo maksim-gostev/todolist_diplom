@@ -10,6 +10,7 @@ from bot.serializer import TgUserSerializer
 from bot.tg.client import TgClient
 
 
+# Create your views here.
 class VerifyUserView(generics.GenericAPIView):
     """
     Верифицируйте пользователя telegram на сайте
@@ -39,8 +40,6 @@ class VerifyUserView(generics.GenericAPIView):
         tg_user.user = request.user
         tg_user.save()
 
-        TgClient().send_message(chat_id=tg_user.chat_id, text='Бот авторезован')
+        TgClient().send_message(chat_id=tg_user.chat_id, text='Bot verificated')
 
         return Response(TgUserSerializer(tg_user).data)
-
-

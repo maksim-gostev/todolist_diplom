@@ -19,32 +19,30 @@ class Command(BaseCommand):
 
     def handle(self, *args: Any, **options: Any) -> None:
         """
-        Получение сообщения
+        Ждёт обновления и ответного сообщения
         :param args:
         :param options:
         :return: message
         """
         offset: int = 0
         while True:
-            res: GetUpdatesResponse = self.tg_client.get_updates(offset=offset, allowed_updates='message')
+            res: GetUpdatesResponse = self.tg_client.get_updates(offset=offset)
             for item in res.result:
                 offset = item.update_id + 1
                 self.handle_message(item.message)
 
     def handle_message(self, message: Message) -> None:
         """
-        Обрабатывает  сообщения от авторизованного или неавторизованного пользователя, возвращает сообщения
-        :param message: сообщение пользователя
+        Обрабатывает сообщение от авторизованного или неавторизованного пользователя, вернуть сообщение
+        :param message: user message
         :return: Answer from bot
         """
-        tg_user, created = TgUser.objects.get_or_create(chat_id=message.chat.id,
-                                                        defaults={'username': message.chat.username})
+        tg_user, created = TgUser.objects.get_or_create(chat_id=message.chat.id)
 
-        if not tg_user.is_verified:
-            tg_user.update_verification_cod()
-            self.tg_client.send_message(message.chat.id, f'Код подтверждения: {tg_user.verification_code}')
+        if tg_user.user:
+            self.handler_authorized_user(tg_user, message)
         else:
-            self.handler_authorized_user(tg_user=tg_user, message=message)
+            self.handler_unauthorized_user(tg_user, message)
 
     def handler_authorized_user(self, tg_user: TgUser, message: Message) -> None:
         """
@@ -53,69 +51,71 @@ class Command(BaseCommand):
         :param message: user message
         :return: Answer from bot
         """
-        commands: list = ['/goals', '/create', '/cancel']
-        create_chat: dict | None = self.states.get(message.chat.id, None)
+        commands: list[str] = ['/goals', '/create', '/cancel']
+
+        if not self.states.get('state') and message.text not in commands:
+            self.tg_client.send_message(
+                chat_id=message.chat.id, text=f'Неизвестная команда!'
+            )
 
         if message.text == '/cancel':
-            self.states.pop(message.chat.id, None)
-            create_chat = None
-            self.tg_client.send_message(chat_id=message.chat.id, text='Операция была отменена')
+            self.states = {}
+            self.tg_client.send_message(
+                chat_id=message.chat.id, text='Операция была отменена'
+            )
 
-        if message.text in commands and not create_chat:
+        if not self.states and message.text in commands:
             if message.text == '/goals':
-                qs = Goal.objects.filter(
-                    category__is_deleted=False, category__board__participants__user_id=tg_user.user.id
-                ).exclude(status=Goal.Status.archived)
-                goals = [f'{goal.id} - {goal.title}' for goal in qs]
-                self.tg_client.send_message(chat_id=message.chat.id, text='Никаких целей' if not goals else '\n'.join(goals))
+                self._get_goals(message, tg_user)
 
             if message.text == '/create':
-                categories_qs = GoalCategory.objects.filter(
-                    board__participants__user_id=tg_user.user.id, is_deleted=False
-                )
+                self.states['state'] = 'creating'
+                self._get_categories(message=message, tg_user=tg_user)
 
-                categories = []
-                categories_id = []
-                for category in categories_qs:
-                    categories.append(f'{category.id} - {category.title}')
-                    categories_id.append(str(category.id))
+        if (
+            self.states.get('state') == 'getting goal title'
+            and message.text not in commands
+        ):
+            self.states['goal_title'] = message.text
+            self._create_goal(
+                chat_id=message.chat.id,
+                title=self.states.get('goal_title'),
+                user_id=tg_user.user.id,
+                category_id=self.states.get('user_category_id'),
+            )
+            self.states = {}
 
+        if self.states.get('state') == 'creating' and message.text not in commands:
+            if message.text in self.states['categories_id']:
                 self.tg_client.send_message(
-                    chat_id=message.chat.id, text=f'Выберите номер категории:\n' + '\n'.join(categories)
+                    chat_id=message.chat.id, text='Название цели'
                 )
-                self.states[message.chat.id] = {
-                    'categories': categories,
-                    'categories_id': categories_id,
-                    'category_id': '',
-                    'goal_title': '',
-                    'stage': 1,
-                }
-        if message.text not in commands and create_chat:
-            if create_chat['stage'] == 2:
-                Goal.objects.create(
-                    user_id=tg_user.user.id,
-                    category_id=int(self.states[message.chat.id]['category_id']),
-                    title=message.text,
+                self.states['user_category_id'] = int(message.text)
+                self.states['state'] = 'getting goal title'
+            else:
+                self.tg_client.send_message(
+                    chat_id=message.chat.id, text='Неправильная категория!'
                 )
-                self.tg_client.send_message(chat_id=message.chat.id, text='Сохранение цели')
-                self.states.pop(message.chat.id, None)
 
-            elif create_chat['stage'] == 1:
-                if message.text in create_chat.get('categories_id', []):
-                    self.tg_client.send_message(chat_id=message.chat.id, text='Введите название цели')
-                    self.states[message.chat.id] = {'category_id': message.text, 'stage': 2}
-                else:
-                    self.tg_client.send_message(
-                        chat_id=message.chat.id,
-                        text='Введите правильный номер категории\n' + '\n'.join(create_chat.get('categories', [])),
-                    )
+    def handler_unauthorized_user(self, tg_user: TgUser, message: Message) -> None:
+        """
+        Верификация пользователя telegram
+        :param tg_user: telegram user
+        :param message: user message
+        :return: verification code
+        """
+        verification_code: str = tg_user.generate_verification_code()
+        tg_user.verification_code = verification_code
+        tg_user.save()
 
-        if message.text not in commands and not create_chat:
-            self.tg_client.send_message(chat_id=message.chat.id, text=f'Неизвестная команда!')
+        self.tg_client.send_message(
+            chat_id=message.chat.id,
+            text=f'Ваш проверочный код:\n {tg_user.verification_code}',
+        )
 
     def _get_goals(self, message: Message, tg_user: TgUser) -> SendMessageResponse:
         """
-        Возвращает цели пользователя или "Нет целей", если цели не существуют
+        Возвращает цели пользователя или "Нет целей", если целей не существует
         :param message: user message
         :param tg_user: telegram user
         :return: Message with user goals
