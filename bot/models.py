@@ -9,20 +9,19 @@ class TgUser(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     verification_code = models.CharField(max_length=50, null=True, blank=True, unique=True)
 
-    class Meta:
-        verbose_name = 'Телеграмм-пользователь'
-        verbose_name_plural = 'Телеграмм-пользователи'
+
 
     @property
     def is_verified(self) -> bool:
         return bool(self.user)
+
 
     def __str__(self):
         return f'{self.__class__.__name__}({self.chat_id})'
 
     @staticmethod
     def _generate_verification_cod() -> str:
-        return get_random_string(20)
+       return get_random_string(20)
 
     def update_verification_cod(self) -> None:
         self.verification_code = self._generate_verification_cod()
