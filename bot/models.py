@@ -17,6 +17,10 @@ class TgUser(models.Model):
         max_length=50, null=True, blank=True, default=None
     )
 
+    @property
+    def is_verified(self) -> bool:
+        return bool(self.user)
+
     @staticmethod
     def generate_verification_code() -> str:
         """
@@ -24,3 +28,14 @@ class TgUser(models.Model):
         :return: verification code
         """
         return get_random_string(length=50)
+
+    def update_verification_code(self) -> None:
+        self.verification_code = self.generate_verification_code()
+        self.save(update_fields=['verification_code'])
+
+    class Meta:
+        verbose_name = 'Телеграмм-пользователь'
+        verbose_name_plural = 'Телеграмм-пользователи'
+
+    def __str__(self):
+        return self.chat_id
