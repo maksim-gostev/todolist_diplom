@@ -9,7 +9,9 @@ from goals.models import Board, BoardParticipant, GoalCategory
 
 @register
 class UserFactory(factory.django.DjangoModelFactory):
-    """User factory"""
+    """
+    Фабрика пользователей
+    """
 
     username = factory.Faker('user_name')
     password = factory.Faker('password')
